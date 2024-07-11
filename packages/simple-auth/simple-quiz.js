@@ -1,9 +1,10 @@
+import axios from 'axios';
 import { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const { BOT_TOKEN, CHANNEL_ID } = process.env;
+const { BOT_TOKEN, CHANNEL_ID, API_BASE_URL } = process.env;
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
@@ -86,23 +87,36 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
+const isUserMapped = async (userId) => {
+  return userMappings.get(userId) || false;
+};
+
+const createMappingUrl = (userId) => {
+  return `${API_BASE_URL}/map-discord?v=${userId}`;
+};
+
 const handleStartQuiz = async interaction => {
   const userId = interaction.user.id;
 
-  if (userMappings.has(userId)) {
-    await sendQuizQuestion(interaction);
-  } else {
-    await sendMappingInstructions(interaction);
+  try {
+    if (await isUserMapped(userId)) {
+      await sendQuizQuestion(interaction);
+    } else {
+      await sendMappingInstructions(interaction);
+    }
+  } catch (error) {
+    console.error('Error in handleStartQuiz:', error);
+    await interaction.reply({ content: '퀴즈 시작 중 오류가 발생했습니다. 나중에 다시 시도해 주세요.', ephemeral: true });
   }
 };
 
 const sendMappingInstructions = async interaction => {
-  const mappingUrl = `https://your-mapping-site.com/map?userId=${interaction.user.id}&guildId=${interaction.guild.id}`;
+  const mappingUrl = createMappingUrl(interaction.user.id);
   
   const embed = new EmbedBuilder()
     .setColor('#0099ff')
-    .setTitle('사용자 매핑이 필요합니다')
-    .setDescription(`[여기를 클릭하여 매핑을 완료하세요](${mappingUrl})\n매핑 완료 후 '!매핑완료' 명령어를 입력해주세요.`);
+    .setTitle('구름 계정과 최초 연동이 필요합니다.')
+    .setDescription(`[여기를 클릭하여 연동을 완료하세요](${mappingUrl})\n연동 완료 후 다시 "퀴즈 시작" 버튼을 클릭하세요.`);
 
   await interaction.reply({ embeds: [embed], ephemeral: true });
 };
