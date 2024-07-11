@@ -1,4 +1,6 @@
-export const name = 'interactionCreate';
+const { Events } = require('discord.js');
+
+export const name = Events.InteractionCreate;
 export async function execute(interaction) {
     if (!interaction.isCommand()) return;
 
